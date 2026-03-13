@@ -25,6 +25,8 @@ jobs:
         run: pip install requests
 
       - name: Run tracker
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python tracker.py
 
       - name: Commit snapshots
