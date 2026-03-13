@@ -10,7 +10,7 @@ EMAIL_TO = "your@email.com"
 
 
 def fetch_xml(url):
-    r = requests.get(url, timeout=30)
+    r = requests.get(url, timeout=(10,60))
     content = r.content
 
     if url.endswith(".gz"):
@@ -20,7 +20,7 @@ def fetch_xml(url):
 
 
 def extract_sitemaps_from_robots(url):
-    r = requests.get(url, timeout=30)
+    r = requests.get(url, timeout=(10,60))
     sitemaps = []
 
     for line in r.text.splitlines():
