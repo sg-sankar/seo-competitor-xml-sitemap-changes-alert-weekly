@@ -1,0 +1,28 @@
+{
+  "competitors": [
+    {
+      "name": "leapscholar",
+      "input": "https://leapscholar.com/robots.txt"
+    },
+    {
+      "name": "aeccglobal",
+      "input": "https://www.aeccglobal.com/robots.txt"
+    },
+    {
+      "name": "upgrad-study-abroad",
+      "input": "https://www.upgrad.com/study-abroad/sitemap.xml"
+    },
+    {
+      "name": "edvoy",
+      "input": "https://edvoy.com/sitemap.xml"
+    },
+    {
+      "name": "edwiseinternational",
+      "input": "https://www.edwiseinternational.com/robots.txt"
+    },
+    {
+      "name": "studies-overseas",
+      "input": "https://www.studies-overseas.com/robots.txt"
+    }
+  ]
+}
