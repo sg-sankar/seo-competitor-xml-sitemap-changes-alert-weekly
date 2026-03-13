@@ -6,7 +6,6 @@ import os
 from datetime import datetime
 
 DATA_DIR = "data"
-EMAIL_TO = "your@email.com"
 
 
 def fetch_xml(url):
@@ -21,11 +20,14 @@ def fetch_xml(url):
 
 def extract_sitemaps_from_robots(url):
     r = requests.get(url, timeout=(10,60))
+
     sitemaps = []
 
     for line in r.text.splitlines():
+        line = line.strip()
         if line.lower().startswith("sitemap:"):
-            sitemaps.append(line.split(":", 1)[1].strip())
+            sitemap = line.split(":",1)[1].strip()
+            sitemaps.append(sitemap)
 
     return sitemaps
 
@@ -51,13 +53,8 @@ def process_sitemap(url, visited_sitemaps, urls):
         for url_tag in root.findall("ns:url", namespace):
 
             loc = url_tag.find("ns:loc", namespace).text.strip()
-            lastmod_tag = url_tag.find("ns:lastmod", namespace)
 
-            lastmod = None
-            if lastmod_tag is not None:
-                lastmod = lastmod_tag.text.strip()
-
-            urls[loc] = lastmod
+            urls[loc] = True
 
 
 def collect_urls(input_url):
@@ -97,82 +94,38 @@ def save_snapshot(path, data):
 def compare(old, new):
 
     new_urls = []
-    updated = []
-    removed = []
+    removed_urls = []
 
     for url in new:
         if url not in old:
             new_urls.append(url)
-        elif old[url] != new[url]:
-            updated.append(url)
 
     for url in old:
         if url not in new:
-            removed.append(url)
+            removed_urls.append(url)
 
-    return new_urls, updated, removed
-
-
-def section_summary(urls):
-
-    sections = {}
-
-    for u in urls:
-
-        parts = u.split("/")
-
-        if len(parts) > 3:
-            section = "/" + parts[3]
-        else:
-            section = "/"
-
-        sections.setdefault(section, 0)
-        sections[section] += 1
-
-    return sections
+    return new_urls, removed_urls
 
 
-def build_email(name, new_urls, updated, removed):
+def send_email(report_text):
 
-    lines = []
+    api_key = os.environ.get("RESEND_API_KEY")
 
-    lines.append(f"Site: {name}")
-    lines.append(f"Time: {datetime.utcnow()}")
-    lines.append("")
-    lines.append(f"New URLs: {len(new_urls)}")
-    lines.append(f"Updated URLs: {len(updated)}")
-    lines.append(f"Removed URLs: {len(removed)}")
-    lines.append("")
+    url = "https://api.resend.com/emails"
 
-    if new_urls:
-        lines.append("NEW URLS")
-        lines += new_urls[:50]
-        lines.append("")
+    payload = {
+        "from": "tracker@resend.dev",
+        "to": ["YOUR_EMAIL@gmail.com"],
+        "subject": "SEO Competitor Sitemap Report",
+        "text": report_text
+    }
 
-    if updated:
-        lines.append("UPDATED URLS")
-        lines += updated[:50]
-        lines.append("")
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
 
-    if removed:
-        lines.append("REMOVED URLS")
-        lines += removed[:50]
-        lines.append("")
-
-    section_counts = section_summary(new_urls + updated)
-
-    if section_counts:
-        lines.append("SECTION CHANGES")
-        for s, c in section_counts.items():
-            lines.append(f"{s} -> {c}")
-
-    return "\n".join(lines)
-
-
-def send_email(text):
-
-    print("EMAIL ALERT")
-    print(text)
+    requests.post(url, json=payload, headers=headers)
 
 
 def run():
@@ -182,12 +135,21 @@ def run():
 
     os.makedirs(DATA_DIR, exist_ok=True)
 
+    report = []
+    report.append("SEO COMPETITOR SITEMAP REPORT")
+    report.append("Run time: " + str(datetime.utcnow()))
+    report.append("")
+
+    failures = []
+
     for comp in config["competitors"]:
 
         name = comp["name"]
         input_url = comp["input"]
 
-        print("Processing:", name)
+        report.append("================================")
+        report.append(name.upper())
+        report.append("================================")
 
         try:
 
@@ -197,18 +159,45 @@ def run():
 
             old_data = load_snapshot(path)
 
-            new_urls, updated, removed = compare(old_data, new_data)
+            new_urls, removed = compare(old_data, new_data)
 
-            if new_urls or updated or removed:
+            report.append(f"New URLs: {len(new_urls)}")
+            report.append(f"Removed URLs: {len(removed)}")
+            report.append("")
 
-                email = build_email(name, new_urls, updated, removed)
-                send_email(email)
+            if new_urls:
+                report.append("NEW URLS")
+                for u in new_urls:
+                    report.append(u)
+                report.append("")
+
+            if removed:
+                report.append("REMOVED URLS")
+                for u in removed:
+                    report.append(u)
+                report.append("")
+
+            if not new_urls and not removed:
+                report.append("No changes")
+                report.append("")
 
             save_snapshot(path, new_data)
 
         except Exception as e:
 
-            print("ERROR:", name, e)
+            failures.append(f"{name} -> {str(e)}")
+
+            report.append("ERROR")
+            report.append(str(e))
+            report.append("")
+
+    if failures:
+        report.append("")
+        report.append("FAILED SITES")
+        for f in failures:
+            report.append(f)
+
+    send_email("\n".join(report))
 
 
 if __name__ == "__main__":
