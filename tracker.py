@@ -114,7 +114,7 @@ def send_email(report_text):
     url = "https://api.resend.com/emails"
 
     payload = {
-        "from": "tracker@resend.dev",
+        "from": "onboarding@resend.dev",
         "to": ["sankardigitalguruL@gmail.com"],
         "subject": "SEO Competitor Sitemap Report",
         "text": report_text
