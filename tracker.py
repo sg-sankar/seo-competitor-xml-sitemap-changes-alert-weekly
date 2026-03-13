@@ -115,7 +115,7 @@ def send_email(report_text):
 
     payload = {
         "from": "onboarding@resend.dev",
-        "to": ["sankardigitalguruL@gmail.com"],
+        "to": ["sankardigitalguru@gmail.com"],
         "subject": "SEO Competitor Sitemap Report",
         "text": report_text
     }
